@@ -7,6 +7,9 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+
+dir <- "/Users/andrew/Course4Week3"
+setwd(dir)
 ```
 
 The idea of K-means clustering is that we pick the centroids (an intial guess), gather the points to those centeroids, and then re-evaluate those centroids.

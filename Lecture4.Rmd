@@ -1,0 +1,78 @@
+---
+title: "Plotting and Color in R"
+author: "Andrew Witherspoon"
+date: "9/30/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+dir <- "/Users/andrew/Course4Week3"
+setwd(dir)
+```
+
+The colorRamp function gives the RBG blends between two given colors - here we'll do red and and blue:
+[,1] is red
+[,2] is blue
+[,3] is green
+```{r}
+pal <- colorRamp(c("red", "blue"))
+```
+pal(0) will be full red:
+```{r}
+pal(0)
+```
+pal(1) will be full blue:
+```{r}
+pal(1)
+```
+pal(.5) will be a blend of red and blue (purple):
+```{r}
+pal(.5)
+```
+
+If you give this pal() a sequence of numbers between 0 and 1, it will return a sequence of colors between red and blue:
+```{r}
+pal(seq(0, 1, len = 10))
+```
+
+Another option is using the colorRampPalette(), which will make your pal() function output hex color codes:
+```{r}
+pal <- colorRampPalette(c("red", "yellow"))
+```
+If you do pal(2), it will output a vector of two colors, full red and full yellow:
+```{r}
+pal(2)
+```
+If you do pal(10), it will output a vector of 10 colors - the first is full red, the last is full yellow.  Then 8 in-between colors:
+```{r}
+pal(10)
+```
+
+The RColorBrewer package has pre-made pallettes.  To get three colors from a RColorBrewer pallet, do this:
+```{r}
+library(RColorBrewer)
+cols <- brewer.pal(3, "BuGn")
+cols
+```
+Now we can use colorRampPalette() on our 3 colors (stored in cols) to create a smooth color ramp.  We'll use it on our volcano height matrix:
+```{r}
+pal <- colorRampPalette(cols)
+image(volcano, col = pal(20))
+```
+
+The smoothScatter() function is usefull when you have a scatterplot with a lot of overlapping information, so that it is more readable.  It essentially uses a histogram to make colors darker where there are lots of points:
+```{r}
+par(mfrow = c(1,2))
+x <- rnorm(10000)
+y <- rnorm(10000)
+plot(x,y)
+smoothScatter(x,y)
+par(mfrow = c())
+```
+
+The other option, of course, is to use transparency:
+```{r}
+plot(x,y, col = rgb(0,0,0,0.2), pch = 19) #0.2 is the alpha
+```
