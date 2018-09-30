@@ -1,0 +1,156 @@
+---
+title: "Principal Components Analysis and Singular Value Decomposition"
+author: "Andrew Witherspoon"
+date: "9/30/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+dir <- "/Users/andrew/Course4Week3"
+setwd(dir)
+```
+
+First we will plot a matrix using random data - just noise, no real pattern:
+```{r}
+set.seed(12345)
+par(mar = rep(0.2, 4))
+dataMatrix <- matrix(rnorm(400), nrow = 40)
+image(1:10, 1:40, t(dataMatrix)[, nrow(dataMatrix):1])
+```
+
+Now we can cluster the data using the heatmap() function:
+```{r}
+par(mar = rep(0.2, 4))
+heatmap(dataMatrix)
+```
+Still not very interesting, because the underlying data has no pattern, but we see how the 10 columns and 40 rows are hierachiacaly clustered.
+
+Now let's add a pattern:
+```{r}
+set.seed(678910)
+for(i in 1:40){
+  #flip a coin
+  coinflip <- rbinom(1, size = 1, prob = 0.5)
+  #if coin is heads, add a common pattern to that row - adds 3 to right 5 values in each row
+  if(coinflip){
+    dataMatrix[i,] <- dataMatrix[i,] + rep(c(0,3), each = 5)
+  }
+}
+```
+
+Now the right side will randomly be much larger for ~half the rows (higher values are lighter):
+```{r}
+par(mar = rep(0.2,4))
+image(1:10, 1:40, t(dataMatrix)[,nrow(dataMatrix):1])
+```
+
+Now let's cluster the patterned data:
+```{r}
+heatmap(dataMatrix)
+```
+The dendogram on the columns shows two clear clusters.  The dendogram on the rows is still largely random (no real pattern), but reorganized
+
+
+We can futher explore the patterns by plotting the row means and column means:
+```{r}
+hh <- hclust(dist(dataMatrix)) #this is the dendogram, if plot(hh)
+plot(hh)
+dataMatrixOrdered <- dataMatrix[hh$order,] #hh$order is the order of points on the dendogram, from left to right.  This orders the Matrix in the same way
+print(hh$order)
+par(mfrow = c(1,3))
+image(t(dataMatrixOrdered)[, nrow(dataMatrixOrdered):1])
+plot(rowMeans(dataMatrixOrdered), 40:1, xlab = "Row Mean", ylab = "Row", pch = 19)
+plot(colMeans(dataMatrixOrdered), xlab = "Column Mewan", pch = 19)
+```
+Easy to see that the first 20 rows have a mean under 20, and the next 20 rows have a mean over 20.  Similarly, the first 5 coulumns have a mean near 0, and the last five columns have a mean near 2.
+
+##Principal Component Analysis
+
+We want to reduce the number of variables to as few as possible that explain as much of the data as possible.  Height and Weight, for example, are very correlated.  So we don't want both in the data.  They can be some variable akin to heightweight that serves just as well.
+
+Refer back to lecture notes to read how PCA is derived from SVD (singular value decompostion):  Essentially, PCA is the "right singular values" ( _v_, below)
+
+Compenents of the SVD - _u_ and _v_
+_u_ is left singular values
+_v_ is right singular values
+```{r}
+svd1 <- svd(scale(dataMatrixOrdered))
+par(mfrow = c(1,3))
+image(t(dataMatrixOrdered)[, nrow(dataMatrixOrdered):1])
+plot(svd1$u[,1], 40:1, xlab = "Row", ylab = "First left singular vector", pch = 19)
+plot(svd1$v[,1], xlab = "Column", ylab = "First right singular vector", pch = 19)
+```
+This is similar to what we did above.  For rows 40 through 17, there is a negagive value (mean) for row. For rows 16 through 1, there is a positive mean value of the row.
+
+Similary for the column means, it finds columns 1 - 5 have a positive mean, columns 6 - 10 have a negative mean.
+
+In terms of PCA - variables 1-5 are one principal component, and variables 6-10 are another principal component.
+
+
+Another component of the SVD - the variance explained:
+```{r}
+par(mfrow = c(1,2))
+plot(svd1$d, xlab = "Column", ylab = "Singular Value", pch = 19)
+plot(svd1$d^2/sum(svd1$d^2), xlab = "Column", ylab = "Prop. of variance explained", pch = 19)
+```
+The left is the raw singluar values, as you go accross.  The raw values don't have much meaning.
+
+The right is the proportion of variance explained by each column.  Almost 40% of the value is explained by one dimension (one principal component).
+
+Here's a little exercise to show that principal components and svd right singlular values are essentially the same:
+```{r}
+svd1 <- svd(scale(dataMatrixOrdered))
+pca1 <- prcomp(dataMatrixOrdered, scale = TRUE)
+plot(pca1$rotation[,1], svd1$v[,1], pch = 19, xlab = "Principal Component 1", ylab = "Right Singular Vector 1")
+abline(c(0,1))
+```
+Notice they all fall on the same line.
+
+
+Now let's take an extreme example.  A matrix whose values are all 0's or 1's.  First 5 columns are 0, next 5 are 1:
+```{r}
+constantMatrix <- dataMatrixOrdered * 0
+for(i in 1:dim(dataMatrixOrdered)[1]){constantMatrix[i,] <- rep(c(0,1), each=5)}
+```
+
+```{r}
+svd1 <- svd(constantMatrix)
+par(mfrow=c(1,3))
+image(t(constantMatrix)[,nrow(constantMatrix):1])
+plot(svd1$d, xlab="Column", ylab="Singular value", pch=19)
+plot(svd1$d^2/sum(svd1$d^2),xlab="Column", ylab="Prop. of variance explained", pch=19)
+```
+Essentially, you can group all values into two clusters (1's and 0's), and single dimension between those two cluster points explains 100% of the variance.
+
+There are a couple more extreme examples in the notes with distinct patterns.
+(slides 14-17).
+
+
+Now let's look at dealing with  missing values:
+```{r}
+dataMatrix2 <- dataMatrixOrdered
+##randomly insert some missing data
+dataMatrix2[sample(1:100, size = 40, replace = FALSE)] <- NA
+#svd1 <- svd(scale(dataMatrix2))  ##doesn't work
+
+##Error in svd(scale(dataMatrix2)) : infinite or missing values in 'x'
+```
+You can't run an svd or a pch on a dataset with missing values
+
+One option is to use the impute.knn() function from the impute package (available from bioconductor.org)
+```{r}
+#biocLite("impute") #install package
+library(impute)
+dataMatrix2 <- impute.knn(dataMatrix2)$data
+svd1 <- svd(scale(dataMatrixOrdered))
+svd2 <- svd(scale(dataMatrix2))
+par(mfrow=c(1,2))
+plot(svd1$v[,1])
+plot(svd2$v[,1])
+```
+The two full data set, on the left and the one with imputed missing values, on the right, are actually pretty similar.
+
+This impute function, impute.knn(), imputes it by using k-nearest-neighbors in that row
+
