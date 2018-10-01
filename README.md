@@ -1,2 +1,2 @@
 # Course4Week3
-Hierarchal Clustering and Plotting and Color
+Hierarchal clustering, K means clustering, and Plotting and Color
